@@ -1,0 +1,346 @@
+---
+title: "Who plays video games"
+Author: Zehui Zhang, Lu Xu
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# 2. Basic Analysis
+### 2.0 Data Processing 
+There are two original data sets, which are viedodata and videoMultiple resprectively.Having a brief glance on these two sets, we could easily found that there are some 99 inside. Based on the statement of every variables provided, we can decide that there 99s are missing value. So as to make the analysis more accurate, we simply replace these missing values to NA.
+```{r}
+# Open the file and redefine the make
+setwd("~/Downloads")
+vd <- read.table("videodata.txt", header=TRUE)
+vm <- read.table("videoMultiple.txt", header=TRUE)
+```
+Clean and wash the data. Replacing all 99 here to NA.
+```{r}
+vd[vd == 99] <- NA
+vm[vm == 99] <- NA
+```
+Simple observations and summary about the data sets
+```{r}
+# Find the numner of students in different like standard
+length(which(vd$like == '1'))
+length(which(vd$like == '2'))
+length(which(vd$like == '3'))
+length(which(vd$like == '4'))
+length(which(vd$like == '5'))
+```
+### 2.1 Fraction Analysis
+So as to have a estimate of the the fraction about students played video games the week prior the survey. We will construct a point estimate and a interval estimate.
+
+Point Estimate
+```{r}
+# Number of people who played the video games
+n = length(which(vd$time > '0'))
+n
+# Estimator
+X_bar = n / length(vd$time)
+X_bar
+# Estimator of SE
+SE = ((X_bar * (1 - X_bar))^(0.5)) / (length(vd$time))^(0.5)
+SE
+
+# Standard deviation
+sd(vd$time)
+```
+Interval Estimate ( Comfidence Interval)
+In this part we choose the significanve level as 5%
+```{r}
+# 95% confidence interval 
+CI = c(X_bar - 2 * SE, X_bar + 2 * SE)
+CI 
+```
+Complement code helping to find the mean of likeness of people who did not play games.
+```{r}
+nplay = subset(vd, vd$time == 0)
+mean(nplay$like, na.rm = TRUE)
+```
+### 2.2 Numerical Analysis for Playing Time vs. Frequency of Play
+Checking to see how the amount of time spend playing video games in the week prior to the survey compared with every reproted frequency.
+```{r}
+# Create 4 subsets by frequence.
+f1 = subset(vd, vd$freq == 1)
+f2 = subset(vd, vd$freq == 2)
+f3 = subset(vd, vd$freq == 3)
+f4 = subset(vd, vd$freq == 4)
+```
+Find the average playing time for each subset, and the standard error
+```{r}
+# The average playing time
+mean(f1$time)
+mean(f2$time)
+mean(f3$time)
+mean(f4$time)
+
+# standard error
+sd(f1$time)/(nrow(f1))^(0.5)
+sd(f2$time)/(nrow(f2))^(0.5)
+sd(f3$time)/(nrow(f3))^(0.5)
+sd(f4$time)/(nrow(f4))^(0.5)
+```
+Number of people in each groups and the relative proportions
+```{r}
+# number of people
+nrow(f1)
+nrow(f2)
+nrow(f3)
+nrow(f4)
+
+# proportion of people in certain group among the total sample size
+nrow(f1) / nrow(vd)
+nrow(f2) / nrow(vd)
+nrow(f3) / nrow(vd)
+nrow(f4) / nrow(vd)
+
+# proportion of people who played the game in each group
+length(which(f1$time > 0)) / nrow(f1)
+length(which(f2$time > 0)) / nrow(f2)
+length(which(f3$time > 0)) / nrow(f3)
+length(which(f4$time > 0)) / nrow(f4)
+```
+### 2.3 Average Amount of Time Spent Playing Video Games
+So as to have a estimate the avergae amount of time spend playing video in the week prior to the survey, followings will construct a point and interval estimate and have simulation study, bootstrap.
+Point Estimate
+```{r}
+X = vd$time
+n = nrow(vd)
+
+# Estimator, Xbar
+Xbar = mean(X)
+Xbar
+
+# Standard error of estimator
+SEx = sd(X) / sqrt(n)
+SEx
+
+# Find the mode of the time and the standard deviation
+getmode <- function(v) {
+     uniqv <- unique(v)
+     uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+getmode(vd$time)
+
+sd(vd$time)
+```
+Interval Estimate ( Comfidence Interval)
+In this part we choose the significanve level as 5%
+```{r}
+CI = c(Xbar - 2 * SEx, Xbar + 2 * SEx)
+CI 
+```
+Bootstrap (Silulation study)
+```{r}
+# Distribution of time
+hist(X, breaks = 20)
+qqnorm(X)
+abline(X, SEx, col='red', lwd=2)
+# Bootstrap
+B <- 500
+Xbar.b <- rep(NULL, B)
+for(b in 1:B) {
+  X.b = sample(vd$time, n, replace = T)
+  Xbar.b[b] <- mean(X.b)
+}
+
+# Compare bootstrap distribution to normal theory
+hist(Xbar.b, breaks = 20, freq = F)
+curve(dnorm(x, Xbar, SEx), 0, 3, col='red', lwd=2, add = T)
+abline(v = Xbar, col='blue', lwd=2)
+qqnorm(Xbar.b)
+abline(Xbar, SEx, col='red', lwd=2)
+```
+Find several feathers of Bootstrap (Numerically)
+```{r}
+# Find the mean, Standard Error and the standard deviation 
+mean(Xbar.b)  
+SEb = sd(Xbar.b) / sqrt(500)
+SEb
+
+sd(Xbar.b)
+
+# Bootstrap CI
+quantile(Xbar.b, c(0.025, 0.975))
+
+
+# skewness and kurtosis of the bootstrap distribution of Xbars
+# Define the functions abuot skewness and kurtosis
+skewness <- function(X) mean(((X - mean(X))/sd(X))^3)
+kurtosis <- function(X) mean(((X - mean(X))/sd(X))^4)
+nsim <- 1000
+skew <- rep(NULL, nsim)
+kurt <- rep(NULL, nsim)
+for(k in 1:nsim) {
+  skew[k] <- skewness(rnorm(B))
+  kurt[k] <- kurtosis(rnorm(B))
+}
+hist(skew, breaks = 50) 
+abline(v = skewness(Xbar.b), col='blue', lwd=2)
+hist(kurt, breaks = 50) 
+abline(v = kurtosis(Xbar.b), col='blue', lwd=2) 
+
+# Find the mean of skewness and kurtosis
+mean(skew)
+mean(kurt)
+skewness(X)
+kurtosis(X)
+```
+### 2.4 “Attitude” for Student Playing Video Games
+To figure out, in general, if students enjoy playing video games. By compare several proportions of different reasons, we could have a soutcut list about some main reasons why students enjoy or not thr games.
+Find the mean of the average likness
+```{r}
+mean(vd$like, na.rm = TRUE)
+getmode(vd$like)
+```
+Find proporition of different reasons
+```{r}
+# Graphics/Realism
+G = length(which(vm$graphic > 0)) / nrow(vm)
+# Relaxation
+R = length(which(vm$relax > 0)) / nrow(vm)
+# Eye/hand coordination
+E = length(which(vm$coord > 0)) / nrow(vm)
+# Mental Challenge
+M = length(which(vm$challenge > 0)) / nrow(vm)
+# Feeling of mastery
+F1 = length(which(vm$master > 0)) / nrow(vm)
+# Bored 
+B1 = length(which(vm$bored > 0)) / nrow(vm)
+
+# Too much time
+T1 = length(which(vm$time > 0)) / nrow(vm)
+# Frustrating
+F2 = length(which(vm$frust > 0)) / nrow(vm)
+# Lonely
+L = length(which(vm$lonely > 0)) / nrow(vm)
+# Too many rules
+T2 = length(which(vm$rules > 0)) / nrow(vm)
+# Costs too much
+C = length(which(vm$cost > 0)) / nrow(vm)
+# Boring
+B2 = length(which(vm$boring > 0)) / nrow(vm)
+# Friend’s don’t play
+F3 = length(which(vm$friends > 0)) / nrow(vm)
+# It is pointless
+I = length(which(vm$point > 0)) / nrow(vm)
+```
+Construct the bar plot showing the percentage directly
+```{r}
+# bar plot for reasons why student play games
+slices1 <- c(G,R,E,M,F1,B1)
+barplot(slices1, main="Reasons student play games")
+
+# bar plot for reasons why student don't play games
+slices2 <- c(T1, F2, L, T2, C, B2, F3, I)
+barplot(slices2, main="Reasons student don't play games" )
+```
+### 2.5 Differences for Students Who Like to Play Video Games vs. Who do not Like
+In order to find out the difference between those who like to play video games and those who don't, we could construct bar plots and analyize directly from the bar plot.
+Creating two subsets, male and female
+```{r}
+# male
+Male = subset(vd, vd$sex == 1)
+
+# female
+Female = subset(vd, vd$sex == 0)
+```
+Find the numbers of students in each different variables and make the bar plot
+```{r}
+# Work
+MW = length(which(Male$work > 0))
+MNW = length(which(Male$work == 0))
+MW
+MNW
+
+FW = length(which(Female$work > 0))
+FNW = length(which(Female$work == 0))
+FW
+FNW
+
+# Computer
+MO = length(which(Male$own > 0))
+MNO = length(which(Male$own == 0))
+MO
+MNO
+
+FO = length(which(Female$own > 0))
+FNO = length(which(Female$own == 0))
+FO
+FNO
+```
+Construct the bar plot
+```{r}
+# Work
+counts <- matrix( c(27,17,23,21), ncol = 2, byrow = TRUE)
+colnames(counts) = c("Male", "Female")
+rownames(counts) = c("Work for pay", "Not work for pay")
+counts <- as.table(counts)
+barplot(counts, main="Work for pay or not",
+  xlab="Genders", col=c("blue","red"))
+legend("topright", c("Work", "Not Work"), fill = c("blue", "red"))
+
+# Computers
+counts <- matrix( c(40,27,13,11), ncol = 2, byrow = TRUE)
+colnames(counts) = c("Male", "Female")
+rownames(counts) = c("Own a PC", "Not own a PC")
+counts <- as.table(counts)
+barplot(counts, main="Own a PC or not",
+  xlab="Genders", col=c("blue","red"))
+legend("topright", c("Own", "Not Own"), fill = c("blue", "red"))
+
+```
+### 2.6 Grade Analysis
+Checking for if the grade distribution ideal, pi chart is the among the best approaches arrive this goal. Compare the percentage between real condition and the ideal one by looking throught the pi chart directly.
+Find the real proportion of the grades in this sample
+```{r}
+# number of people who get A, B, C, D and F
+nA = length(which(vd$grade == 4))
+nB = length(which(vd$grade == 3))
+nC = length(which(vd$grade == 2))
+nD = length(which(vd$grade == 1))
+nF = length(which(vd$grade == 0))
+
+# Find the proportion
+pA = nA / nrow(vd)
+pB = nB / nrow(vd)
+pC = nC / nrow(vd)
+pD = nD / nrow(vd)
+pF = nF / nrow(vd)
+
+pA
+pB
+pC
+pD
+pF
+```
+Construct the pie chart for both ideal and real one
+```{r}
+# pi chart for ideal one
+ideal = c(20,30,40,10)
+lbls <- c("A's 20%", "B's 30%", "C's 40%", "D's and lower 10%")
+pie(ideal, labels = lbls, col=rainbow(length(lbls)),main="Pie Chart of ideal grades")
+
+# pi chart for real one
+real = c(nA, nB,nC,nD+nF)
+lbls2 = c("A's", "B's", "C's", "D's and lower")
+pct <- round(c(pA,pB,pC,pD+pF)*100, 3)
+lbls2 <- paste(lbls2, pct) # add percents to labels 
+lbls2 <- paste(lbls2,"%",sep="") # ad % to labels 
+pie(real,labels = lbls2, col=rainbow(length(lbls)),
+   main="Pie Chart of real grades")
+```
+# 3. Advanced Analysis
+So as to figure out if the average playing time of male and female students are the same, here, we construct a hypothesis test here. But first we have to process the variance hypothesis test first so as to determine if the varianves are the same. Then we can determine the degree of freedom.
+
+Variance hypothesis test
+```{r}
+var.test(Male$time, Female$time)
+```
+Means hypothesis test with unequal variances
+```{r}
+t.test(Male$time,Female$time,conf.level = 0.98)
+```
+

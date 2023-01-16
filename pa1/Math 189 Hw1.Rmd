@@ -1,0 +1,272 @@
+---
+title: "Smoking mother and their baby’s birth weight "
+Author: Zehui Zhang, Lu Xu
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+  html_notebook: default
+---
+
+# 2. Basic Analysis
+### 2.1 Data Processing & Numerically Analysis
+Break the original data set into two subsets, smoked one and non-smoked one.
+Remove the invalid data, where shows 9 in smoke column.
+It seems pretty direct that, here, 0 means nonsmoke, and 1 means smoke. So 9 appared here is invalid data.
+```{r}
+# Clean the data, and make it into 2 sub-data sets(smoked, nonsmoked)
+setwd("~/Downloads")
+Ori_data = read.table('babies.txt', header=T)
+```
+Smoke_data
+```{r}
+smoke_ind = which(Ori_data$smoke > 0 & Ori_data$smoke < 9)
+smoke_data = Ori_data[smoke_ind,]
+```
+Nonsmoke_data
+```{r}
+nonsmoke_ind = which(Ori_data$smoke < 1)
+nonsmoke_data = Ori_data[nonsmoke_ind,]
+```
+Find some special values, like mean, mode, and standard deviation, etc.
+```{r}
+summary(smoke_data)
+summary(nonsmoke_data)
+
+smk = smoke_data$bwt
+nsmk = nonsmoke_data$bwt
+
+smk_sd = sd(smk)
+nsmk_sd = sd(nsmk)
+smk_sd
+nsmk_sd
+
+smk_bar = mean(smk)
+nsmk_bar = mean(smk)
+smk_bar
+nsmk_bar
+
+#helper function that help to find the mode from a data set
+getmode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+  }
+smk_mode = getmode(smk)
+nsmk_mode = getmode(nsmk)
+smk_mode
+nsmk_mode
+```
+Standardize the data
+```{r}
+std_smk = (smk - smk_bar)/smk_sd
+std_nsmk = (nsmk - nsmk_bar)/nsmk_sd
+```
+To check the normality by 68-95-99.7 rule
+```{r}
+# Check the normality of smoked one
+Fs = ecdf(std_smk)
+Fs(3) - Fs(-3)
+Fs(2) - Fs(-2)
+Fs(1) - Fs(-1)
+
+# Check the normality of nonsmoked one
+Fn = ecdf(std_nsmk)
+Fn(3) - Fn(-3)
+Fn(2) - Fn(-2)
+Fn(1) - Fn(-1)
+```
+To check the normality by skewness and kurtosis
+```{r}
+# Function to find the Skewness Coefficient
+skew = function(X) {
+  Xbar = mean(X); S = sd(X)
+  Z = (X - Xbar)/S
+  mean(Z^3)
+}
+
+skew(std_smk)
+skew(std_nsmk)
+
+#Function to find the Kurtosis Coefficient
+kurt = function(X) {
+  Xbar = mean(X); S = sd(X)
+  Z = (X - Xbar)/S
+  mean(Z^4)
+}
+
+kurt(std_smk)
+kurt(std_nsmk)
+```
+By using the foor loop to find the skewness and kurtosis coefficient of a normal distribution with 742 observations by 10000 times.
+```{r}
+S1 = NULL
+for(i in 1:10000){
+  S1[i] = skew(rnorm(484))
+}
+summary(S1)
+
+K1 = NULL
+for(i in 1:10000){
+  K1[i] = kurt(rnorm(484))
+}
+summary(K1)
+
+S2 = NULL
+for(i in 1:10000){
+  S2[i] = skew(rnorm(742))
+}
+summary(S2)
+
+K2 = NULL
+for(i in 1:10000){
+  K2[i] = kurt(rnorm(742))
+}
+summary(K2)
+```
+### 2.2 Use graphical methods to compare the two distributions of birth weight.
+Create the histograms
+```{r}
+# histograms for smoked group
+hist(smk, breaks = 30, probability=T)
+curve(dnorm(x, mean = 114.1, sd = 18.1), 60, 160, col='red', add=T)
+
+# histograms for nonsmoked group
+hist(nsmk, breaks = 30, probability = T)
+curve(dnorm(x, mean = 123, sd = 17.4), 60, 180, col='red', add=T)
+```
+Check the normality of two sub data sets
+```{r}
+# QQ plot(Quantile-Quantile Plot) for smoked group
+qqnorm(std_smk)
+abline(0, 1, col='red', lwd=2)
+
+# QQ plot(Quantile-Quantile Plot) for nonsmoked group
+qqnorm(std_nsmk)
+abline(0, 1, col='red', lwd=2)
+```
+### 2.3 Comparison of incidence
+Find the proportion of the smoked mothers and non smoked.
+```{r}
+# % smoked
+length(smk)/length(Ori_data$bwt) *100
+# % nonsmoked
+length(nsmk)/length(Ori_data$bwt) *100
+```
+Find the incidence of low-birth-weight when low-birth-weight is below 88
+```{r}
+LBW_smk1 = length(which(smk < 88))
+LBW_nsmk1 = length(which(nsmk < 88))
+
+# incidence for smoker
+smk_i1 = LBW_smk1 / length(smk)
+# incidence for nonsmoker 
+nsmk_i1 = LBW_nsmk1 / length(nsmk)
+smk_i1
+nsmk_i1
+LBW_smk1
+LBW_nsmk1
+```
+Find the incidence of low-birth-weight when low-birth-weight is below 60
+```{r}
+LBW_smk2 = length(which(smk < 60))
+LBW_nsmk2 = length(which(nsmk < 60))
+
+# incidence for smoker
+smk_i2 = LBW_smk2 / length(smk)
+# incidence for nonsmoker 
+nsmk_i2 = LBW_nsmk2 / length(nsmk)
+smk_i2
+nsmk_i2
+LBW_smk2
+LBW_nsmk2
+```
+Find the incidence of low-birth-weight when low-birth-weight is 100
+```{r}
+LBW_smk3 = length(which(smk < 100))
+LBW_nsmk3 = length(which(nsmk < 100))
+
+# incidence for smoker
+smk_i3 = LBW_smk3 / length(smk)
+# incidence for nonsmoker 
+nsmk_i3 = LBW_nsmk3 / length(nsmk)
+smk_i3
+nsmk_i3
+LBW_smk3
+LBW_nsmk3
+```
+Showing these value in the histogram
+```{r}
+# for smoker
+hist(smk)
+abline(v = 88, col='green')
+abline(v = 60, col='blue')
+abline(v = 100, col='red')
+
+# for nonsmoker
+hist(nsmk)
+abline(v = 88, col='green')
+abline(v = 60, col='blue')
+abline(v = 100, col='red')
+```
+Measure the difference:
+```{r}
+# difference when LBW is 88
+smk_i1 - nsmk_i1
+# difference when LBW is 60
+smk_i2 - nsmk_i2
+# difference when LBW is 100
+smk_i3 - nsmk_i3
+```
+# Advanced Analysis
+Seperate into 3 groups
+```{r}
+# Age between 18 - 30
+young_ind = which(Ori_data$age < 30 & Ori_data$age >= 18)
+young = Ori_data[young_ind,]
+
+# Age between 31-40
+middle_ind = which(Ori_data$age < 40 & Ori_data$age >= 31)
+middle = Ori_data[middle_ind,]
+
+# Age greater than 41
+old_ind = which(Ori_data$age > 40)
+old = Ori_data[old_ind,]
+```
+Find mean, median, mode, and incidence of low-birth-weight
+```{r}
+# find mean, median, and mode
+summary(young)
+summary(middle)
+summary(old)
+```
+```{r}
+y_mode = getmode(young$bwt)
+m_mode = getmode(middle$bwt)
+o_mode = getmode(old$bwt)
+y_mode
+m_mode
+o_mode
+```
+```{r}
+# find incidence
+LBW_young = length(which(young$bwt < 88))
+LBW_middle = length(which(middle$bwt < 88))
+LBW_old = length(which(old$bwt < 88))
+
+young_incidence = LBW_young / length(young$bwt)
+middle_incidence = LBW_middle / length(middle$bwt)
+old_incidence = LBW_old / length(old$bwt)
+
+young_incidence
+middle_incidence
+old_incidence
+LBW_young
+LBW_middle
+LBW_old
+```
+Find the skewness
+```{r}
+skew(young$bwt)
+skew(middle$bwt)
+skew(old$bwt)
+```

@@ -1,0 +1,304 @@
+---
+title: "DNA Pattern are potential replication sites"
+Author: Zehui Zhang, Lu Xu
+output: pdf_document
+---
+
+# 2. Basic Analysis
+### 2.1 Random Scatter
+In this part, we will do the simulation study to see what the ramdom scatter looks like, and after severl simulations, we could compare our real data to the simulations. 
+
+Specifically here we set down that the total length is 229354, and the number of interval is 60, and sample size is 296
+```{r}
+# Open the file and redefine the make
+setwd("~/Downloads")
+dat <- read.table("hcmv.txt", header=TRUE)
+
+N = 229354 # total length
+n = 296 # sample size
+k = 60 # number of intervals
+expected = n/k
+lambda = n/k
+```
+Simulation 1
+```{r}
+# set several numbers
+set.seed(100)
+sim1 <- sample.int(N, size=n, replace=FALSE)
+
+# Histogram
+hist(sim1, breaks = k, col = rgb(1,0,0,0.5))
+abline(h = expected, col='black', lwd = 2)
+abline(h = expected - 2*sqrt(lambda), col='black', lwd = 2, lty =2)
+abline(h = expected + 2*sqrt(lambda), col='black', lwd = 2, lty =2)
+```
+Simulation 2
+```{r}
+set.seed(200)
+sim2 <- sample.int(N, size=n, replace=FALSE)
+
+# Histogram
+hist(sim2, breaks = k, col = rgb(1,0,1,0.5))
+abline(h = expected, col='black', lwd = 2)
+abline(h = expected - 2*sqrt(lambda), col='black', lwd = 2, lty =2)
+abline(h = expected + 2*sqrt(lambda), col='black', lwd = 2, lty =2)
+```
+Simulation 3
+```{r}
+set.seed(300)
+sim3 <- sample.int(N, size=n, replace=FALSE)
+
+# Histogram
+hist(sim3, breaks = k, col = rgb(0.5,0,0,0.5))
+abline(h = expected, col='black', lwd = 2)
+abline(h = expected - 2*sqrt(lambda), col='black', lwd = 2, lty =2)
+abline(h = expected + 2*sqrt(lambda), col='black', lwd = 2, lty =2)
+```
+Real data
+```{r}
+real <- dat$location
+
+# Histogram
+hist(real, breaks = k, col = "lightblue")
+abline(h = expected, col='black', lwd = 2)
+abline(h = expected - 2*sqrt(lambda), col='black', lwd = 2, lty =2)
+abline(h = expected + 2*sqrt(lambda), col='black', lwd = 2, lty =2)
+```
+Plot the cdf curves
+```{r}
+plot(ecdf(sim1),main = 'CDF curves', col = rgb(1,0,0,0.5), lwd = 2, do.point=FALSE)
+plot(ecdf(sim2), col = rgb(1,0,1,0.5), lwd = 2, do.point=FALSE,add = TRUE)
+plot(ecdf(sim3), col = rgb(0.5,0,0,0.5), lwd = 2,do.point=FALSE, add = TRUE)
+plot(ecdf(real), col = 'lightblue', lwd = 2, do.point=FALSE,add = TRUE)
+abline(0, 1/N, col = 'black', lwd = 2)
+```
+### 2.2 Locations and spacings
+In this part we will discovr the spacings between consecutive palindromes, and the sum of consecutive pairs, triplets.And check their distributions.
+
+For real data
+```{r}
+# spacings between consecutive palindromes
+spa1 = diff(real)
+
+# spacing between sum of consecutive pairs
+spa2 = rep(NULL, 294)
+for(i in 1:294){
+  temp1 = real[i] + real[i+1]
+  temp2 = real[i+1] + real[i+2]
+  diff1 = temp2 - temp1
+  spa2[i] = diff1
+}
+
+# spacing between sum of consecutive triplets
+spa3 = rep(NULL, 293)
+for(i in 1:293){
+  temp1 = real[i] + real[i+1] + real[i+2]
+  temp2 = real[i+1] + real[i+2] + real[i+3]
+  diff2 = temp2 - temp1
+  spa3[i] = diff2
+}
+```
+For simulaitions
+```{r}
+sim1_sorted = sort(sim1,decreasing = FALSE)
+# spacings between consecutive palindromes
+spa1s = diff(sim1_sorted)
+
+# spacing between sum of consecutive pairs
+spa2s = rep(NULL, 294)
+for(i in 1:294){
+  temp1 = sim1_sorted[i] + sim1_sorted[i+1]
+  temp2 = sim1_sorted[i+1] + sim1_sorted[i+2]
+  diff1s = temp2 - temp1
+  spa2s[i] = diff1s
+}
+
+# spacing between sum of consecutive triplets
+spa3s = rep(NULL, 293)
+for(i in 1:293){
+  temp1 = sim1_sorted[i] + sim1_sorted[i+1] + sim1_sorted[i+2]
+  temp2 = sim1_sorted[i+1] + sim1_sorted[i+2] + sim1_sorted[i+3]
+  diff2s = temp2 - temp1
+  spa3s[i] = diff2s
+}
+```
+Make the histogram of three different spacings
+
+Spacings between consecutive palindromes
+```{r}
+hist(spa1, breaks = 15,main = 'Spacings between consecutive palindromes', col = rgb(1,0,0,0.5), probability = TRUE)
+lines(density(spa1, adjust = 2), col = rgb(1,0,0,0.5))
+
+hist(spa1s, breaks = 15, col = rgb(0,0,1,0.5), probability = TRUE, add = TRUE)
+lines(density(spa1s, adjust = 2), col = rgb(0,0,1,0.5))
+legend(x = 4000, y = 8e-4, legend = c("real", "simulation"), lty = c(1,1), col = c(rgb(1,0,0,0.5), rgb(0,0,1,0.5)))
+```
+Spacing between sum of consecutive pairs
+```{r}
+hist(spa2, breaks = 15,main = 'Spacings between sum of consecutive pairs', col = rgb(1,0,0,0.5), probability = TRUE)
+lines(density(spa1, adjust = 2), col = rgb(1,0,0,0.5))
+
+hist(spa2s, breaks = 15, col = rgb(0,0,1,0.5), probability = TRUE, add = TRUE)
+lines(density(spa1s, adjust = 2), col = rgb(0,0,1,0.5))
+legend(x = 4000, y = 4e-4, legend = c("real", "simulation"), lty = c(1,1), col = c(rgb(1,0,0,0.5), rgb(0,0,1,0.5)))
+```
+Spacing between sum of consecutive triplets
+```{r}
+hist(spa3, breaks = 15,main = 'Spacings between sum of consecutive triplets', col = rgb(1,0,0,0.5), probability = TRUE)
+lines(density(spa1, adjust = 2), col = rgb(1,0,0,0.5))
+
+hist(spa3s, breaks = 15, col = rgb(0,0,1,0.5), probability = TRUE, add = TRUE)
+lines(density(spa1s, adjust = 2), col = rgb(0,0,1,0.5))
+legend(x = 5000, y = 0.0002, legend = c("real", "simulation"), lty = c(1,1), col = c(rgb(1,0,0,0.5), rgb(0,0,1,0.5)))
+```
+Plot the cumulative density curves
+```{r}
+# for real curves
+plot(ecdf(spa1),main = 'CDF curves', col = "blue", lwd = 2, do.point=FALSE)
+plot(ecdf(spa2), col = "red", lwd = 2, do.point=FALSE,add = TRUE)
+plot(ecdf(spa3), col = "black", lwd = 2, do.point=FALSE,add = TRUE)
+
+# for expected curves
+expected1 = rexp(295, rate= 1/(295/60))
+plot(ecdf(expected1), main = "Expected curves",lwd = 2, col = "blue",do.point=FALSE)
+
+expected2 = rgamma(294, shape = 2, rate = 1/(294/60))
+plot(ecdf(expected2),lwd = 2, col = "red",add = TRUE, do.point=FALSE)
+
+expected3 = rgamma(293, shape = 2, rate = 1/(293/60))
+plot(ecdf(expected3),lwd = 2, col = "black",add = TRUE, do.point=FALSE)
+```
+### 2.3 Counts
+In this part, we gonna examine the counts of palindromes in various regions of the DNA by both graphical methods and statistical tests.
+```{r}
+#Helper function 
+regionsplit <- function(n.region, gene, site){
+  count.int <- table(cut(site, breaks = seq(1, length(gene), length.out=n.region+1), include.lowest=TRUE))
+  count.vector <- as.vector(count.int)
+  count.tab <- table(factor(count.vector,levels=0:max(count.vector)))
+  return (count.tab)
+}
+```
+Histograms of counts for both simulation and real data
+```{r}
+# Find the counts in each intervels
+tab <- table(cut(real, breaks = seq(0, N, length.out = k+1), include.lowest = TRUE))
+tab_counts <- as.vector(tab)
+
+# Plot the histogram
+hist(tab_counts, breaks = 10, col = rgb(1,0,0,0.5), probability = TRUE, xlab = "number of points inside an interval")
+lines(density(tab_counts, adjust = 2), col = rgb(1,0,0,0.5))
+Pois <- rpois(296, lambda = mean(tab_counts))
+hist(Pois,breaks = 10, col = rgb(0,0,1,0.5), probability = TRUE, add = TRUE)
+lines(density(Pois, adjust = 2), col = rgb(0,0,1,0.5))
+legend(x = 9, y = 0.15, legend = c("real", "Poisson"), lty = c(1,1), col = c(rgb(1,0,0,0.5), rgb(0,0,1,0.5)))
+```
+Nonoverlaping interval counts
+```{r}
+# For simulation
+set.seed(1000)
+gene <- seq(1, N)
+sim <- sample.int(N, size=n, replace=FALSE)
+n.region = k 
+sim_tab = regionsplit(n.region, gene, sim)
+
+# For real data
+gene <- seq(1, N)
+real_tab = regionsplit(n.region, gene, real)
+```
+Table with number of hits and expected number of intervals containing those numbers of hits
+```{r}
+trunc=7
+lvls=factor(c(0:(trunc-1),paste(">=",trunc,sep="")),levels=c(0:(trunc-1),paste(">=",trunc,sep="")))
+real.vector=as.vector(real_tab)
+
+real_trunc=c(real.vector[1:trunc],sum(real.vector[-(1:trunc)]))
+
+
+lambda=n/n.region
+p=c(dpois(0:(trunc-1),lambda),1-sum(dpois(0:(trunc-1),lambda)))
+E=p*n.region
+tab1=data.frame(levels=lvls,Observed=real_trunc,Expected=E)
+
+tab1
+
+
+```
+Chi-square Test
+```{r}
+chisq.test(real_trunc,p=p,simulate.p.value=TRUE)
+```
+Standardized residual plot
+```{r}
+Residuals <- (real_trunc - E) / sqrt(E)
+plot(Residuals, type = 'h', ylab = "standardized residuals", xlab = "interval index")
+```
+### 2.4 The biggest cluster
+In this part, we will go and check if the biggest count among 60 interval common which could indicate a potential origin of replications.By doing the simulation study we could find the distribution of maximum then we can compare the common one and what in the real data.
+
+Find the biggest count among 60 intervals
+```{r}
+R.hist = hist(real, breaks = 60)
+MC = max(R.hist$counts)
+```
+Simulation study to find the distribution of maximum
+```{r}
+nsim = 2000   # number of simulations
+
+# Simulate data
+max.count = rep(NULL, nsim)
+for(i in 1:nsim) {
+  X = sample(1:N, size = n, replace = F)
+  X.hist = hist(X, breaks = k, plot = F)
+  max.count[i] = max(X.hist$counts)
+}
+
+# Distribution of maximum
+hist(max.count)
+
+# Add a vertical line of real maximum count
+abline(v = MC, col = "red")
+```
+Find the probability of max count is equal to the real max count in 2000 simulaitons.
+```{r}
+length(which(max.count == 18)) / 2000
+```
+### 3. Advanced Analysis
+In this part we will keep going to discover about spacing. 
+Here we will go and analyize the spacing between sum of consecutive quadruplets
+```{r}
+# Spacing for real data
+spa4 = rep(NULL, 292)
+for(i in 1:292){
+  temp1 = real[i] + real[i+1] + real[i+2] + real[i+3]
+  temp2 = real[i+1] + real[i+2] + real[i+3] + real[i+4]
+  diff3 = temp2 - temp1
+  spa4[i] = diff3
+}
+# Spacing for simulation
+spa4s = rep(NULL, 292)
+for(i in 1:292){
+  temp1 = sim1_sorted[i] + sim1_sorted[i+1] + sim1_sorted[i+2] + sim1_sorted[i+3]
+  temp2 = sim1_sorted[i+1] + sim1_sorted[i+2] + sim1_sorted[i+3] + sim1_sorted[i+4]
+  diff3s = temp2 - temp1
+  spa4s[i] = diff3s
+}
+```
+Plot the cdf
+```{r}
+plot(ecdf(spa4/300),main = 'CDF curves', col = "blue", lwd = 2, do.point=FALSE)
+
+# for expected curves
+expected4 = rexp(292, rate= 1/(292/60))
+plot(ecdf(expected4), main = "Expected curves",lwd = 2, col = "red",add = TRUE,do.point=FALSE)
+
+```
+Find the hist
+```{r}
+hist(spa4, breaks = 15,main = 'Spacings between sum of consecutive quadruplets', col = rgb(1,0,0,0.5), probability = TRUE)
+
+hist(spa4s, breaks = 15, col = rgb(0,0,1,0.5), probability = TRUE, add = TRUE)
+legend(x = 5000, y = 0.0003, legend = c("real", "simulation"), lty = c(1,1), col = c(rgb(1,0,0,0.5), rgb(0,0,1,0.5)))
+```
+
+

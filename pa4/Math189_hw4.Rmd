@@ -1,0 +1,251 @@
+---
+title: "Snow Gauge Calibration"
+author: Lu Xu and Zehui Zhang
+output: pdf_document
+
+---
+
+# 2. Basic Analysis
+So as to determine a deoth profile of snow density, in this case, we will develop a procedure to calibrate the snow gauge from data
+
+Open the data set
+```{r}
+setwd("~/Downloads")
+dat <- read.table("gauge.txt", header=TRUE)
+```
+
+### 2.1 Raw Data
+By using R, fit this data set to a liner regression model, and plot it out. Then check if the transformation needs. 
+
+Make the sactterplot and the best fit linear regression line
+```{r}
+# sactter plot and the linear regression model
+plot(dat$gain ~ dat$density, ylab = "Gain", xlab = "Density",pch = 19)
+Lm = lm(dat$gain ~ dat$density, data = dat)
+abline(Lm,col = 'red',lwd = 3)
+summary(Lm)
+```
+Make the residual plot
+```{r}
+plot(residuals(Lm) ~ dat$gain, ylab = "Residual", xlab = 'Density',pch =19)
+abline(h = 0,col = 'red',lwd = 3)
+```
+By making the histogram and the qq plot of the residual, it is efficient to check if the transformation needed. 
+```{r}
+hist(Lm$residuals)
+qqnorm(Lm$residuals,pch = 19)
+qqline(Lm$residuals,col = "red")
+```
+
+### 2.2 Transformation of Data
+Based on the work in the 2.1 section, we found that the transformation is necessary. In this part, we will transform the data into an appropriate model and justify this model is appropriate one. 
+
+Log Transformation
+```{r}
+gain = dat$gain
+density = dat$density
+Logm = lm(log(gain) ~ density, data = dat)
+summary(Logm)
+```
+Make the scatter plot after transformation
+```{r}
+plot(log(gain) ~ density, data = dat, pch = 16) ; grid(lty='solid')
+lines(predict(Logm) ~ density, data = dat, pch = 16, col = "red")
+```
+Plot the residual plot
+```{r}
+plot(residuals(Logm) ~ density, data = dat, pch = 16)
+abline(h = 0, lwd = 2, col = "red")
+```
+Create the histogram and the pp plot of the residual, so as to check if this model appropriate
+```{r}
+hist(residuals(Logm))
+qqnorm(Logm$residuals,pch = 19)
+qqline(Logm$residuals,col = "red")
+```
+
+### 2.3 Robustness
+Due to the densities of the polyethylene blocks are not reported exactly, we will do the simulation study by add a random error into the data set for both linear model and the transformed model.
+
+Add the random error to the original density
+Data set 1
+```{r}
+new_dat1 = jitter(density, factor = 1, amount = NULL)
+dat$new_data1 = new_dat1
+ndensity1 = dat$new_data1
+```
+Data set 2
+```{r}
+new_dat2 = jitter(density, factor = 1, amount = NULL)
+dat$new_data2 = new_dat2
+ndensity2 = dat$new_data2
+```
+Simulation study for the linear model
+```{r}
+# For data set 1
+plot(dat$gain ~ ndensity1, ylab = "Gain", xlab = "New Density 1",pch = 19)
+nLm1 = lm(dat$gain ~ ndensity1, data = dat)
+abline(nLm1,col = 'red',lwd = 3)
+summary(nLm1)
+
+plot(residuals(nLm1) ~ dat$gain, ylab = "Residual", xlab = 'New Density 1',pch =19)
+abline(h = 0,col = 'red',lwd = 3)
+
+hist(nLm1$residuals)
+qqnorm(nLm1$residuals,pch = 19)
+qqline(nLm1$residuals,col = "red")
+```
+```{r}
+# for data set 2
+plot(dat$gain ~ ndensity2, ylab = "Gain", xlab = "New Density 2",pch = 19)
+nLm2 = lm(dat$gain ~ ndensity2, data = dat)
+abline(nLm2,col = 'red',lwd = 3)
+summary(nLm2)
+
+plot(residuals(nLm2) ~ dat$gain, ylab = "Residual", xlab = 'New Density 2',pch =19)
+abline(h = 0,col = 'red',lwd = 3)
+
+hist(nLm2$residuals)
+qqnorm(nLm2$residuals,pch = 19)
+qqline(nLm2$residuals,col = "red")
+```
+Simulation study for log model
+```{r}
+# For Data Set 1
+nLogm1 = lm(log(gain) ~ ndensity1, data = dat)
+summary(nLogm1)
+plot(log(gain) ~ ndensity1, data = dat, pch = 16) ; grid(lty='solid')
+lines(predict(nLogm1) ~ ndensity1, data = dat, pch = 16, col = "red")
+plot(residuals(nLogm1) ~ ndensity1, data = dat, pch = 16)
+abline(h = 0, lwd = 2, col = "red")
+hist(residuals(nLogm1))
+qqnorm(nLogm1$residuals,pch = 19)
+qqline(nLogm1$residuals,col = "red")
+```
+```{r}
+# For Data Set 2
+nLogm2 = lm(log(gain) ~ ndensity2, data = dat)
+summary(nLogm2)
+plot(log(gain) ~ ndensity2, data = dat, pch = 16) ; grid(lty='solid')
+lines(predict(nLogm2) ~ ndensity2, data = dat, pch = 16, col = "red")
+plot(residuals(nLogm2) ~ ndensity2, data = dat, pch = 16)
+abline(h = 0, lwd = 2, col = "red")
+hist(residuals(nLogm2))
+qqnorm(nLogm2$residuals,pch = 19)
+qqline(nLogm2$residuals,col = "red")
+```
+
+### 2.4 Forward prediction
+Produce point estimates and uncertainty bands for gains, specifically, 0.508, 0.001
+```{r}
+# Prediction bounds
+p1<-predict(Logm,newdata = data.frame(density = unique(density)), interval ="prediction")
+p1
+dat2 <- data.frame(density = density,log = log(gain))
+plot(dat2,pch = 19)
+abline(Logm)
+lines(p1[,2]~ unique(density),lty = 2,col = "blue")
+lines(p1[,3]~ unique(density),lty = 2,col = "blue")
+
+#0.508 
+pred1 = predict(Logm,newdata = data.frame(density = 0.508),interval = "prediction")
+exp(pred1)
+
+#0.001
+pred2 = predict(Logm,newdata = data.frame(density = 0.001),interval = "prediction")
+exp(pred2)
+```
+### 2.5 Reverse prediction prediction
+Invert the forward prediction made in previous part, and check the corresponding gain of the real density value. 
+```{r}
+# Invert model
+iLogm = lm(log(density) ~ gain, data = dat)
+summary(iLogm)
+```
+```{r}
+newdensity = data.frame(gain = c(38.6,426.7))
+p2 <- predict(iLogm,newdata = newdensity, interval ="prediction")
+exp(p2)
+dat3 <- data.frame(gain = gain, density = log(density))
+plot(dat3,pch = 19)
+abline(iLogm)
+lines(p2[,2]~ newdensity$gain,lty = 2,col = "blue")
+lines(p2[,3]~ newdensity$gain,lty = 2,col = "blue")
+```
+
+### 2.6 Corss-Validation 
+SO as to avoid the condition that the measurement corresponding to the densities 0.508 and 0.001 were included in the fitting. Thus in this part, we will remove these data from the original data set then make a new predict. 
+
+Remove the 0.508 and 0.001
+```{r}
+setwd("~/Downloads")
+dat <- read.table("gauge.txt", header=TRUE)
+sub1 = subset(dat, dat$density != 0.508)
+sub2 = subset(dat, dat$density != 0.001)
+```
+prediction for the subset 1
+```{r}
+# create the model 
+sub1density = sub1$density
+sub1gain = sub1$gain
+sub1_iLogm = lm(log(sub1density) ~ sub1gain, data = sub1)
+summary(sub1_iLogm)
+
+# make the prediction
+newset = data.frame(sub1gain = c(38.6))
+sub1p <- predict(sub1_iLogm, newdata = newset, interval ="prediction")
+exp(sub1p)
+```
+prediction for subset2
+```{r}
+# create the model 
+sub2density = sub2$density
+sub2gain = sub2$gain
+sub2_iLogm = lm(log(sub2density) ~ sub2gain, data = sub2)
+summary(sub2_iLogm)
+
+# make the prediction
+newset = data.frame(sub2gain = c(38.6))
+sub2p <- predict(sub2_iLogm, newdata = newset, interval ="prediction")
+exp(sub2p)
+```
+
+# 3 Advanced Analysis
+In the precious analysis, we only used the log transformation, but is there some better models? In this part, we will use cross-validation to find if polynomial regression works here. Specifically, what quadratic regression and cubic regression behave compared with log regression
+```{r}
+# Quadratic model
+m2 <- lm(density ~ gain + I(gain^2), data=dat)
+plot(density ~ gain, data=CO2, pch=16); grid(lty='solid')
+lines(predict(m2) ~ gain, data=dat, col='red', lwd=2)
+plot(residuals(m2) ~ gain, data=dat, pch=16)
+abline(h = 0, lwd = 2)
+summary(m2)
+
+# make the prediction
+newset_m2 = data.frame(gain = c(38.6))
+predict(m2, newdata = newset_m2, interval ="prediction")
+
+# residual between best expect and the real data
+abs(0.53064383 - 0.508)
+```
+```{r}
+# Cubic regression
+m3 <- lm(density ~ gain + I(gain^2) + I(gain^3), data=dat)
+plot(density ~ gain, data=dat, pch=16); grid(lty='solid')
+lines(predict(m3) ~ gain, data=dat, col='red', lwd=2)
+plot(residuals(m3) ~ gain, data=dat, pch=16)
+abline(h = 0, lwd = 2)
+summary(m3)
+
+# make the prediction
+newset_m3 = data.frame(gain = c(38.6))
+predict(m3, newdata = newset_m3, interval ="prediction")
+
+# residual between best expect and the real data
+abs(0.532838748 - 0.508)
+```
+The residual between real value and the best fit for log model
+```{r}
+0.654081341 - 0.508
+```
+
